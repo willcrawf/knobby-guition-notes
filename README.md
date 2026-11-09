@@ -1,12 +1,12 @@
 # Knobby on GUITION JC3636K518
 
-Notes for running the open-source [Knobby](https://github.com/knobby-mtg/knobby-mtg-life-counter) Magic: The Gathering life counter on a GUITION complete round knob (JC3636K518 / JC3636K518C-I-YR1 style).
+Notes and Windows companion scripts for running the open-source [Knobby](https://github.com/knobby-mtg/knobby-mtg-life-counter) Magic: The Gathering life counter on a GUITION complete round knob (JC3636K518 / JC3636K518C-I-YR1 style).
 
-This repo is **documentation only**. It does not ship Knobby source, factory flash dumps, or manufacturer media.
+This repo is **not a Knobby fork**. It does not ship Knobby source, factory flash dumps, or manufacturer media. Scripts expect a separate upstream clone nearby.
 
 ## Compatibility (read this first)
 
-**Expected:** Knobby’s built-in `board_k518` pin profile matches this hardware family.
+**Expected:** Knobby's built-in `board_k518` pin profile matches this hardware family.
 
 - **Source-compared:** manufacturer demo pins (`pincfg.h`) line up with Knobby `board_k518` for display, touch, encoder, backlight, battery ADC, and boot button.
 - **Device-tested on one unit:** after flashing to the confirmed ESP32-S3 port, serial showed `Probing JC3636K518... found!` plus CST816 / ST77916 init. That is **one tested device**, not universal proof for every listing suffix or PCB revision.
@@ -19,10 +19,11 @@ Flash clock (`qio` vs `qio120`) is a separate choice from pins — see [Flash mo
 2. [Upstream Knobby](#upstream-knobby)
 3. [Windows: pick the correct MCU](#windows-pick-the-correct-mcu)
 4. [Flash mode (`qio` vs `qio120`)](#flash-mode-qio-vs-qio120)
-5. [Build / upload with arduino-cli](#build--upload-with-arduino-cli)
-6. [Knobby UX tip (Players vs Track)](#knobby-ux-tip-players-vs-track)
-7. [Recovery (high level)](#recovery-high-level)
-8. [More detail](#more-detail)
+5. [Companion scripts (Windows)](#companion-scripts-windows)
+6. [Build / upload with arduino-cli](#build--upload-with-arduino-cli)
+7. [Knobby UX tip (Players vs Track)](#knobby-ux-tip-players-vs-track)
+8. [Recovery (high level)](#recovery-high-level)
+9. [More detail](#more-detail)
 
 ## Hardware family
 
@@ -47,7 +48,14 @@ Knobby does not need a pin-map fork for K518-class hardware based on the source 
 - Source / Makefile: [knobby-mtg/knobby-mtg-life-counter](https://github.com/knobby-mtg/knobby-mtg-life-counter)
 - Browser installer: [knobby-mtg.github.io/knobby-mtg-life-counter](https://knobby-mtg.github.io/knobby-mtg-life-counter/)
 
-Clone or install from upstream. This notes repo is not a fork.
+Clone upstream next to this notes repo (or set `KNOBBY_ROOT`):
+
+```powershell
+cd C:\Code   # parent of this notes repo
+git clone https://github.com/knobby-mtg/knobby-mtg-life-counter.git
+```
+
+Install Arduino cores / libraries per upstream README / `make firmware-deps`. This notes repo is not a fork and does not vendor that tree.
 
 ## Windows: pick the correct MCU
 
@@ -81,19 +89,64 @@ Manufacturer Arduino Tools screenshot for this family highlights **QIO 120 MHz**
 
 **Recommendation for this board family:** try **`qio120` first**. If upload succeeds but the unit fails to boot (loop, dead UI, no useful serial), rebuild and flash with **`qio`**.
 
+Companion scripts default to `qio120`. Override:
+
+```powershell
+$env:KNOBBY_FLASH_MODE = "qio"
+```
+
 Details: [`docs/FLASH_MODE.md`](docs/FLASH_MODE.md).
 
-## Build / upload with arduino-cli
+## Companion scripts (Windows)
 
-Use Knobby’s custom partitions and the same core options as upstream, optionally swapping flash mode:
+All under [`scripts/`](scripts/). ASCII-only PowerShell. They call `arduino-cli` on PATH (or `$env:ARDUINO_CLI`) and expect an upstream Knobby clone (sibling `knobby-mtg-life-counter` or `$env:KNOBBY_ROOT`).
+
+| Script | Purpose |
+|--------|---------|
+| [`scripts/list-ports.ps1`](scripts/list-ports.ps1) | List COM / PnP hints; remind: chip-detect S3, do not trust COM#, cable flip |
+| [`scripts/env.ps1`](scripts/env.ps1) | Shared paths, FQBN, Knobby root discovery, chip-id helper (dot-sourced) |
+| [`scripts/build-knobby.ps1`](scripts/build-knobby.ps1) | `arduino-cli compile` only |
+| [`scripts/upload-knobby.ps1`](scripts/upload-knobby.ps1) | Confirm ESP32-S3 (unless `-SkipChipConfirm`), then `arduino-cli upload` |
+
+Typical flow:
+
+```powershell
+# 1) Identify the S3 port (do not trust COM number)
+.\scripts\list-ports.ps1
+esptool --port COMx chip-id    # must report ESP32-S3; else flip USB-C 180 degrees
+
+# 2) Build (default FlashMode=qio120)
+.\scripts\build-knobby.ps1
+
+# 3) Upload (re-confirms chip-id by default)
+.\scripts\upload-knobby.ps1 -Port COMx
+
+# Optional: compile + upload in one step
+.\scripts\upload-knobby.ps1 -Port COMx -Build
+
+# If boot fails after a good upload, retry at 80 MHz:
+$env:KNOBBY_FLASH_MODE = "qio"
+.\scripts\build-knobby.ps1
+.\scripts\upload-knobby.ps1 -Port COMx
+```
+
+Environment overrides:
+
+| Variable | Meaning |
+|----------|---------|
+| `KNOBBY_ROOT` | Path to upstream `knobby-mtg-life-counter` clone |
+| `KNOBBY_FLASH_MODE` | `qio120` (default) or `qio` |
+| `ARDUINO_CLI` | Full path to `arduino-cli.exe` if not on PATH |
+
+Default FQBN (scripts + manual):
 
 ```text
 esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc,FlashMode=qio120,PartitionScheme=custom
 ```
 
-Upstream default (80 MHz) is the same string with `FlashMode=qio`.
+## Build / upload with arduino-cli
 
-Example (after cloning Knobby and installing its libraries — see upstream README / CONTRIBUTING):
+Manual equivalent of the scripts (after cloning Knobby and installing its libraries — see upstream README / CONTRIBUTING):
 
 ```powershell
 # Identify the S3 port first (see docs/WINDOWS_USB.md)
@@ -105,7 +158,7 @@ arduino-cli compile --fqbn $fqbn knobby
 arduino-cli upload  --fqbn $fqbn -p $port knobby
 ```
 
-If boot fails after a successful upload, change `FlashMode=qio120` to `FlashMode=qio` and compile/upload again.
+Upstream default (80 MHz) is the same string with `FlashMode=qio`. Prefer the companion scripts when on Windows so chip-id confirm stays in the loop.
 
 ## Knobby UX tip (Players vs Track)
 
@@ -132,11 +185,12 @@ For a 4-way Commander view:
 |-----|--------|
 | [`docs/WINDOWS_USB.md`](docs/WINDOWS_USB.md) | Port identification, VID hints, cable flip |
 | [`docs/FLASH_MODE.md`](docs/FLASH_MODE.md) | `qio` vs `qio120`, evidence strength, A/B order |
-| [`scripts/list-ports.ps1`](scripts/list-ports.ps1) | Optional Windows helper to list COM / USB hints |
+| [`scripts/list-ports.ps1`](scripts/list-ports.ps1) | List COM / USB hints; chip-detect reminder |
+| [`scripts/build-knobby.ps1`](scripts/build-knobby.ps1) / [`upload-knobby.ps1`](scripts/upload-knobby.ps1) | Compile / flash helpers |
 
 ## What this repo is not
 
-- Not a Knobby source fork
+- Not a Knobby source fork (scripts point at a separate upstream clone)
 - Not App Select / launcher WIP
 - Not manufacturer zip contents, TF card media, or `factory-esp32s3-fullflash-*.bin` dumps
 - Not a guarantee that every JC3636K518 listing revision behaves identically

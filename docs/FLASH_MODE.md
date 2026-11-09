@@ -44,6 +44,25 @@ Fallback (upstream Knobby):
 esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc,FlashMode=qio,PartitionScheme=custom
 ```
 
+## Companion scripts
+
+Windows helpers in this repo default to `FlashMode=qio120`:
+
+```powershell
+.\scripts\build-knobby.ps1
+.\scripts\upload-knobby.ps1 -Port COMx
+```
+
+Force the upstream 80 MHz path:
+
+```powershell
+$env:KNOBBY_FLASH_MODE = "qio"
+.\scripts\build-knobby.ps1
+.\scripts\upload-knobby.ps1 -Port COMx
+```
+
+Shared FQBN construction lives in [`scripts/env.ps1`](../scripts/env.ps1).
+
 ## Note on write-time vs runtime settings
 
 Some Espressif upload paths still print programmer defaults such as `dio` / `80m` in `flash_args` even when the sketch was built with a different `FlashMode`. Use boot behavior and a confirmed S3 port as the real A/B test; do not over-read a single log line in isolation.

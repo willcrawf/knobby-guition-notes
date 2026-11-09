@@ -1,5 +1,12 @@
-# List serial ports and hint which may be ESP32-S3 vs the secondary ESP32.
+# List serial ports and remind: chip-detect ESP32-S3; do not trust COM number.
 # Docs-first helper for GUITION JC3636K518-style knobs. Confirm with esptool chip-id.
+# ASCII-only.
+
+Write-Host "==> Reminder"
+Write-Host "Do NOT trust the COM number. This knob has two USB data paths on one USB-C plug."
+Write-Host "Always chip-detect ESP32-S3 before flashing. If you get classic ESP32, flip the cable 180 degrees."
+Write-Host "Device power switch must be ON."
+Write-Host ""
 
 Write-Host "==> arduino-cli board list (if installed)"
 if (Get-Command arduino-cli -ErrorAction SilentlyContinue) {
@@ -22,5 +29,5 @@ Write-Host "- USB-SERIAL / CH340 / CP210x                  -> often the secondar
 Write-Host ""
 Write-Host "Confirm before flashing, e.g.:"
 Write-Host "  esptool --port COMx chip-id"
-Write-Host "If tools report classic ESP32 instead of ESP32-S3, flip USB-C 180 degrees and retry."
-Write-Host "Device power switch must be ON."
+Write-Host "You want ESP32-S3. Classic ESP32 => flip USB-C 180 degrees and retry."
+Write-Host "See docs\WINDOWS_USB.md"

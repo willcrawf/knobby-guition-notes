@@ -19,6 +19,8 @@ From this repo (PowerShell):
 .\scripts\list-ports.ps1
 ```
 
+The script lists COM / PnP hints and reminds you: **do not trust the COM number**, chip-detect **ESP32-S3**, and **flip USB-C 180 degrees** if you see classic ESP32. Listing alone is not enough — always run `chip-id` (upload script does this by default).
+
 ### Option B — inline commands
 
 ```powershell
@@ -53,3 +55,14 @@ You want a response that clearly identifies **ESP32-S3**. Also useful: `esptool 
 - Device power switch on the bottom should be **ON**.
 - Prefer a direct USB port over a flaky hub when first bringing the board up.
 - Keep a full 16 MB S3 backup before the first erase/upload (see README recovery section).
+
+## Companion upload (re-check chip)
+
+[`scripts/upload-knobby.ps1`](../scripts/upload-knobby.ps1) takes `-Port COMx` and, by default, re-runs `esptool chip-id` and aborts unless the chip is **ESP32-S3**. Skip only if you already confirmed in this session:
+
+```powershell
+.\scripts\upload-knobby.ps1 -Port COMx
+.\scripts\upload-knobby.ps1 -Port COMx -SkipChipConfirm   # not recommended
+```
+
+See the README [Companion scripts](../README.md#companion-scripts-windows) section for build/upload flow and `KNOBBY_ROOT` / `KNOBBY_FLASH_MODE` overrides.
