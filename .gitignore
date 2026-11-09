@@ -1,0 +1,12 @@
+# Local scratch — never commit dumps or vendor media
+*.bin
+*.elf
+*.map
+*.hex
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+tools/
+build/
+recovery/backups/
