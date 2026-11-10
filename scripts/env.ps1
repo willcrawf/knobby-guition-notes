@@ -4,13 +4,17 @@ $ErrorActionPreference = "Stop"
 
 $NotesRoot = Split-Path -Parent $PSScriptRoot
 
-# Upstream Knobby clone. Override with $env:KNOBBY_ROOT if needed.
-# Expected layout: sibling of this notes repo, or any path you set.
-#   git clone https://github.com/knobby-mtg/knobby-mtg-life-counter.git
+# Firmware root. Override with $env:KNOBBY_ROOT if needed.
+# Prefer the multi-app platform sibling; fall back to older clone names.
+#   git clone https://github.com/willcrawf/knobby-platform.git
 if (-not $env:KNOBBY_ROOT) {
-  $candidate = Join-Path (Split-Path -Parent $NotesRoot) "knobby-mtg-life-counter"
-  if (Test-Path (Join-Path $candidate "knobby")) {
-    $env:KNOBBY_ROOT = $candidate
+  $parent = Split-Path -Parent $NotesRoot
+  foreach ($name in @("knobby-platform", "knobby-mtg-life-counter")) {
+    $candidate = Join-Path $parent $name
+    if (Test-Path (Join-Path $candidate "knobby")) {
+      $env:KNOBBY_ROOT = $candidate
+      break
+    }
   }
 }
 
