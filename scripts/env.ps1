@@ -5,13 +5,17 @@ $ErrorActionPreference = "Stop"
 $NotesRoot = Split-Path -Parent $PSScriptRoot
 
 # Firmware root. Override with $env:KNOBBY_ROOT if needed.
-# Prefer the multi-app platform sibling; fall back to older clone names.
-#   git clone https://github.com/willcrawf/knobby-platform.git
+# Prefer Guition Dial platform sibling; fall back to older clone names.
+#   git clone https://github.com/willcrawf/guition-dial.git
+function Test-FirmwareSketchRoot {
+  param([string]$Root)
+  return (Test-Path (Join-Path $Root "firmware\knobby")) -or (Test-Path (Join-Path $Root "knobby"))
+}
 if (-not $env:KNOBBY_ROOT) {
   $parent = Split-Path -Parent $NotesRoot
-  foreach ($name in @("knobby-platform", "knobby-mtg-life-counter")) {
+  foreach ($name in @("guition-dial", "knobby-platform", "knobby-mtg-life-counter")) {
     $candidate = Join-Path $parent $name
-    if (Test-Path (Join-Path $candidate "knobby")) {
+    if (Test-FirmwareSketchRoot $candidate) {
       $env:KNOBBY_ROOT = $candidate
       break
     }
@@ -55,24 +59,32 @@ function Invoke-ArduinoCli {
   if ($LASTEXITCODE -ne 0) { throw "arduino-cli failed ($LASTEXITCODE): $($CliArgs -join ' ')" }
 }
 
+function Get-FirmwareSketch {
+  param([Parameter(Mandatory = $true)][string]$Root)
+  $sketchNew = Join-Path $Root "firmware\knobby"
+  if (Test-Path $sketchNew) { return $sketchNew }
+  $sketchOld = Join-Path $Root "knobby"
+  if (Test-Path $sketchOld) { return $sketchOld }
+  return $null
+}
+
 function Assert-KnobbyRoot {
   if (-not $KnobbyRoot) {
     throw @"
-Knobby source not found.
+Firmware source not found.
 
-Clone upstream next to this notes repo (or set KNOBBY_ROOT):
+Clone Guition Dial next to this notes repo (or set KNOBBY_ROOT):
 
   cd $(Split-Path -Parent $NotesRoot)
-  git clone https://github.com/knobby-mtg/knobby-mtg-life-counter.git
+  git clone https://github.com/willcrawf/guition-dial.git
 
 Then re-run, or:
 
-  `$env:KNOBBY_ROOT = 'C:\path\to\knobby-mtg-life-counter'
+  `$env:KNOBBY_ROOT = 'C:\path\to\guition-dial'
 "@
   }
-  $sketch = Join-Path $KnobbyRoot "knobby"
-  if (-not (Test-Path $sketch)) {
-    throw "Knobby sketch folder missing at $sketch (KNOBBY_ROOT=$KnobbyRoot)."
+  if (-not (Get-FirmwareSketch $KnobbyRoot)) {
+    throw "Firmware sketch folder missing under $KnobbyRoot (expected firmware\knobby or knobby)."
   }
   return $KnobbyRoot
 }

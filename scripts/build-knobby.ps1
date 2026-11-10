@@ -10,7 +10,7 @@ param(
 $root = Assert-KnobbyRoot
 Assert-ArduinoCli | Out-Null
 
-$sketch = Join-Path $root "knobby"
+$sketch = Get-FirmwareSketch $root
 if (-not $BuildPath) {
   $BuildPath = Join-Path $NotesRoot "build\knobby"
 }
